@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#111111">
+    <title>Tesla FSD Milestone</title>
+    <style>
+        :root { --red: #E82127; --bg: #111; --card: #1d1d1d; --text: #fff; --dim: #a0a0a0; --border: #333; }
+        [data-theme="light"] { --bg: #f4f4f4; --card: #fff; --text: #111; --dim: #666; --border: #ddd; }
+        
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s; }
+        .container { background: var(--card); padding: 25px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--red); margin-bottom: 20px; padding-bottom: 10px; }
+        h1 { font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+        
+        .btn { width: 100%; padding: 16px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; font-size: 1rem; }
+        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px; font-size: 0.8rem; margin-top: 5px; }
+
+        .stat-box { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.2); }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-label { font-size: 0.7rem; color: var(--dim); text-transform: uppercase; }
+        .stat-value { display: block; font-size: 1.4rem; font-weight: bold; }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: var(--dim); font-size: 0.8rem; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text); font-size: 1.1rem; box-sizing: border-box; }
+
+        .highlight { background: rgba(232, 33, 39, 0.05); padding: 25px; border-radius: 12px; text-align: center; margin-top: 5px; border: 1px solid rgba(232, 33, 39, 0.2); }
+        .big-number { display: block; font-size: 4rem; font-weight: 900; color: var(--red); line-height: 1; margin: 10px 0; }
+        
+        #status { font-size: 0.85rem; text-align: center; display: block; margin-bottom: 15px; color: #4CAF50; font-weight: bold; min-height: 1.2em; }
+
+        /* History Table */
+        .history-section { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: var(--text); }
+        .history-table th { text-align: left; color: var(--dim); padding: 8px; border-bottom: 1px solid var(--border); }
+        .history-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .io-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        summary { font-size: 0.75rem; color: var(--dim); cursor: pointer; text-align: center; margin-top: 20px; }
+        #debug { font-family: monospace; font-size: 0.6rem; color: #666; background: #000; padding: 10px; border-radius: 5px; margin-top: 10px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; }
+    </style>
+</head>
+<body data-theme="dark">
+<div class="container">
+    <div class="header">
+        <h1>FSD Tracker</h1>
+        <button onclick="toggleTheme()" style="background:none; border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:0.7rem; padding:4px 8px;">🌓 Theme</button>
+    </div>
+
+    <button class="btn" onclick="document.getElementById('camInput').click()">📷 Auto-Scan Dashboard</button>
+    <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+    <span id="status">Ready</span>
+
+    <div class="stat-box">
+        <div class="stat-item"><span class="stat-label">Current %</span><span class="stat-value" id="disp_pct">--%</span></div>
+        <div class="stat-item" style="border-left: 1px solid var(--border);"><span class="stat-label">Next Target</span><span class="stat-value" id="disp_next">--%</span></div>
+    </div>
+
+    <div class="input-group">
+        <label>Self-Driving Miles</label>
+        <input type="number" id="sd_miles" step="0.1" inputmode="decimal" oninput="saveAndCalc(true)">
+    </div>
+    <div class="input-group">
+        <label>Total Miles</label>
+        <input type="number" id="total_miles" step="0.1" inputmode="decimal" oninput="saveAndCalc(true)">
+    </div>
+
+    <div class="highlight">
+        <span style="font-size: 0.9rem; color: var(--dim);" id="milestone_desc">Miles to hit next %</span>
+        <span class="big-number" id="result">--</span>
+    </div>
+
+    <div class="history-section">
+        <h3 style="font-size: 0.8rem; text-transform: uppercase;">History</h3>
+        <table class="history-table">
+            <thead><tr><th>Date</th><th>SD</th><th>Total</th><th>%</th></tr></thead>
+            <tbody id="history_body"></tbody>
+        </table>
+    </div>
+
+    <div class="io-buttons">
+        <button class="btn btn-sec" onclick="exportData()">📤 Export Data</button>
+        <button class="btn btn-sec" onclick="document.getElementById('importInput').click()">📥 Import Data</button>
+        <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+
+    <details>
+        <summary>Settings & Logs</summary>
+        <div class="input-group" style="margin-top:15px;">
+            <label>Gemini API Key</label>
+            <input type="password" id="api_key" placeholder="AIza..." oninput="localStorage.setItem('tsla_key', this.value)">
+        </div>
+        <div id="debug">--- Session Log ---</div>
+    </details>
+</div>
+
+<script>
+    const MODEL_ID = "gemini-2.5-flash"; 
+    const sdIn = document.getElementById('sd_miles');
+    const totIn = document.getElementById('total_miles');
+    const keyIn = document.getElementById('api_key');
+    const debug = document.getElementById('debug');
+
+    function log(msg) { debug.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + debug.innerHTML; }
+
+    window.onload = () => {
+        sdIn.value = localStorage.getItem('tsla_sd') || "";
+        totIn.value = localStorage.getItem('tsla_tot') || "";
+        keyIn.value = localStorage.getItem('tsla_key') || "";
+        const savedTheme = localStorage.getItem('tsla_theme') || "dark";
+        document.body.setAttribute('data-theme', savedTheme);
+        calculate();
+        renderHistory();
+        log("App Ready.");
+    };
+
+    function saveAndCalc(addHistory = false) {
+        const sd = sdIn.value;
+        const tot = totIn.value;
+        localStorage.setItem('tsla_sd', sd);
+        localStorage.setItem('tsla_tot', tot);
+        
+        if (addHistory && sd && tot) {
+            let history = JSON.parse(localStorage.getItem('tsla_history') || "[]");
+            // Only add if last entry is different
+            if (history.length === 0 || history[0].sd !== sd || history[0].tot !== tot) {
+                history.unshift({ sd, tot, time: new Date().toLocaleString() });
+                localStorage.setItem('tsla_history', JSON.stringify(history.slice(0, 50))); // Keep last 50
+                renderHistory();
+            }
+        }
+        calculate();
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('tsla_history') || "[]");
+        const body = document.getElementById('history_body');
+        body.innerHTML = history.map(h => `
+            <tr>
+                <td>${h.time.split(',')[0]}</td>
+                <td>${h.sd}</td>
+                <td>${h.tot}</td>
+                <td>${Math.round((h.sd/h.tot)*100)}%</td>
+            </tr>
+        `).join('');
+    }
+
+    function toggleTheme() {
+        const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('tsla_theme', next);
+    }
+
+    // --- Takeout / Takein ---
+    function exportData() {
+        const data = {
+            sd: localStorage.getItem('tsla_sd'),
+            tot: localStorage.getItem('tsla_tot'),
+            key: localStorage.getItem('tsla_key'),
+            history: JSON.parse(localStorage.getItem('tsla_history') || "[]")
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tesla_fsd_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        log("Data exported.");
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                localStorage.setItem('tsla_sd', data.sd || "");
+                localStorage.setItem('tsla_tot', data.tot || "");
+                localStorage.setItem('tsla_key', data.key || "");
+                localStorage.setItem('tsla_history', JSON.stringify(data.history || []));
+                location.reload(); // Refresh to apply everything
+            } catch (err) { log("Import Failed: Invalid File"); }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- Camera & API ---
+    document.getElementById('camInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const key = localStorage.getItem('tsla_key');
+        if (!file || !key) { alert("Check API key!"); return; }
+
+        document.getElementById('status').innerText = "Scanning Dashboard...";
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64Data = reader.result.split(',')[1];
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [
+                        { text: "Return ONLY a JSON object: {\"sd\": 0.0, \"total\": 0.0} from this screen." },
+                        { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                    ]}]})
+                });
+                const data = await response.json();
+                const json = JSON.parse(data.candidates[0].content.parts[0].text.match(/\{.*\}/s)[0]);
+                sdIn.value = json.sd;
+                totIn.value = json.total;
+                document.getElementById('status').innerText = "Sync Success!";
+                saveAndCalc(true);
+            } catch (err) { 
+                log(`Scan Error: ${err.message}`); 
+                document.getElementById('status').innerText = "Scan Failed.";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function calculate() {
+        const sd = parseFloat(sdIn.value) || 0;
+        const tot = parseFloat(totIn.value) || 0;
+        if (tot <= 0) return;
+        const ratio = sd / tot;
+        const currentPct = Math.round(ratio * 100);
+        let targetRatio = (currentPct + 0.5) / 100;
+        if (ratio >= targetRatio) targetRatio = (currentPct + 1.5) / 100;
+
+        document.getElementById('disp_pct').innerText = currentPct + "%";
+        document.getElementById('disp_next').innerText = Math.round(targetRatio * 100) + "%";
+        document.getElementById('milestone_desc').innerText = `Miles to reach ${Math.round(targetRatio * 100)}%`;
+
+        const x = (targetRatio * tot - sd) / (1 - targetRatio);
+        document.getElementById('result').innerText = Math.max(0, x).toFixed(1);
+    }
+</script>
+</body>
+</html>
