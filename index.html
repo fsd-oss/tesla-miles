@@ -85,18 +85,11 @@
     <div class="history-section">
         <h3 style="font-size: 0.8rem; text-transform: uppercase;">History</h3>
         <table class="history-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>SD / Total</th>
-                    <th>Current %</th>
-                    <th style="color: var(--red);">Miles to Go</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Date</th><th>SD</th><th>Total</th><th>%</th></tr></thead>
             <tbody id="history_body"></tbody>
         </table>
     </div>
-    
+
     <div class="io-buttons">
         <button class="btn btn-sec" onclick="exportData()">📤 Export Data</button>
         <button class="btn btn-sec" onclick="document.getElementById('importInput').click()">📥 Import Data</button>
@@ -154,30 +147,15 @@
     function renderHistory() {
         const history = JSON.parse(localStorage.getItem('tsla_history') || "[]");
         const body = document.getElementById('history_body');
-        
-        body.innerHTML = history.map(h => {
-            const sd = parseFloat(h.sd);
-            const tot = parseFloat(h.tot);
-            const ratio = sd / tot;
-            const currentPct = Math.round(ratio * 100);
-            
-            // Calculate the milestone for this specific historical entry
-            let targetRatio = (currentPct + 0.5) / 100;
-            if (ratio >= targetRatio) targetRatio = (currentPct + 1.5) / 100;
-            
-            const x = (targetRatio * tot - sd) / (1 - targetRatio);
-            const milesNeeded = Math.max(0, x).toFixed(1);
-            const targetLabel = Math.round(targetRatio * 100);
-
-            return `
-                <tr>
-                    <td>${h.time.split(',')[0]}</td>
-                    <td>${sd.toFixed(1)} / ${tot.toFixed(1)}</td>
-                    <td>${currentPct}%</td>
-                    <td style="font-weight: bold; color: var(--red);">${milesNeeded} mi <span style="font-size: 0.6rem; color: var(--dim);">to ${targetLabel}%</span></td>
-                </tr>
-            `;
-        }).join('');
+        body.innerHTML = history.map(h => `
+            <tr>
+                <td>${h.time.split(',')[0]}</td>
+                <td>${h.sd}</td>
+                <td>${h.tot}</td>
+                <td>${Math.round((h.sd/h.tot)*100)}%</td>
+            </tr>
+        `).join('');
+    }
 
     function toggleTheme() {
         const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
