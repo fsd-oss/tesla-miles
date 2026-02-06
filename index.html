@@ -41,8 +41,14 @@
         <button onclick="toggleTheme()" class="btn-sec">🌓 Theme</button>
     </div>
 
-    <button class="btn" onclick="document.getElementById('camInput').click()">📷 Scan Dashboard Image</button>
-    <input type="file" id="camInput" accept="image/*" style="display:none">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <button class="btn" onclick="document.getElementById('cameraTrigger').click()">📷 Camera</button>
+        <button class="btn" onclick="document.getElementById('fileTrigger').click()">🖼️ Gallery</button>
+    </div>
+    
+    <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="fileTrigger" accept="image/*" style="display:none">
+    
     <span id="status">System Ready</span>
 
     <div class="stat-box">
