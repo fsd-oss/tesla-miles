@@ -46,8 +46,8 @@
         <button class="btn" onclick="document.getElementById('fileTrigger').click()">🖼️ Gallery</button>
     </div>
     
-    <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none">
-    <input type="file" id="fileTrigger" accept="image/*" style="display:none">
+    <input type="file" id="cameraTrigger" accept="image/*" capture="environment" style="display:none" onchange="handleScan(event)">
+    <input type="file" id="fileTrigger" accept="image/*" style="display:none" onchange="handleScan(event)">
     
     <span id="status">System Ready</span>
 
@@ -103,7 +103,6 @@
     function log(msg) { document.getElementById('debug').innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + document.getElementById('debug').innerHTML; }
 
     window.onload = () => {
-        // Robust Loader: Checks for multiple key names
         sdIn.value = localStorage.getItem('tsla_sd') || localStorage.getItem('tesla_sd_miles') || "";
         totIn.value = localStorage.getItem('tsla_tot') || localStorage.getItem('tesla_total_miles') || "";
         document.getElementById('api_key').value = localStorage.getItem('tsla_key') || localStorage.getItem('tsla_gemini_key') || "";
@@ -127,7 +126,7 @@
             log("Migration attempt finished. Refreshing...");
             setTimeout(() => location.reload(), 1500);
         } else {
-            log("No legacy keys found in this browser storage.");
+            log("No legacy keys found.");
         }
     }
 
@@ -180,7 +179,6 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
             const d = JSON.parse(ev.target.result);
-            // BACKWARDS COMPATIBILITY: Handles both naming conventions
             localStorage.setItem('tsla_sd', d.sd || d.tesla_sd_miles || "");
             localStorage.setItem('tsla_tot', d.tot || d.tesla_total_miles || "");
             localStorage.setItem('tsla_key', d.key || d.tsla_gemini_key || "");
@@ -190,10 +188,11 @@
         reader.readAsText(e.target.files[0]);
     }
 
-    document.getElementById('camInput').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
+    async function handleScan(event) {
+        const file = event.target.files[0];
         const key = localStorage.getItem('tsla_key') || localStorage.getItem('tsla_gemini_key');
         if (!file || !key) return alert("Missing API Key in Settings!");
+        
         document.getElementById('status').innerText = "Analyzing...";
         const reader = new FileReader();
         reader.onloadend = async () => {
@@ -206,10 +205,13 @@
                 sdIn.value = j.sd; totIn.value = j.total;
                 document.getElementById('status').innerText = "Sync Success!";
                 saveAndCalc(true);
-            } catch (err) { document.getElementById('status').innerText = "Scan Failed."; log(err.message); }
+            } catch (err) { 
+                document.getElementById('status').innerText = "Scan Failed."; 
+                log(err.message); 
+            }
         };
         reader.readAsDataURL(file);
-    });
+    }
 
     function calculate() {
         const sd = parseFloat(sdIn.value) || 0, tot = parseFloat(totIn.value) || 0;
