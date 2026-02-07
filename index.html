@@ -73,11 +73,18 @@
     <div class="history-section">
         <h3 style="font-size: 0.8rem; text-transform: uppercase;">History</h3>
         <table class="history-table">
-            <thead><tr><th>Date</th><th>%</th><th>Target Gap</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>FSD Miles</th>
+                    <th>Total Miles</th>
+                    <th style="color: var(--red);">Target Gap</th>
+                </tr>
+            </thead>
             <tbody id="history_body"></tbody>
         </table>
     </div>
-
+        
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
         <button class="btn btn-sec" onclick="exportData()">📤 Export Data</button>
         <button class="btn btn-sec" onclick="document.getElementById('impInput').click()">📥 Import Data</button>
@@ -147,13 +154,31 @@
     function renderHistory() {
         const hist = JSON.parse(localStorage.getItem('tsla_history') || "[]");
         const body = document.getElementById('history_body');
+        
         body.innerHTML = hist.map(h => {
-            const sd = parseFloat(h.sd), tot = parseFloat(h.tot);
-            const ratio = sd/tot, currentPct = Math.round(ratio * 100);
-            let target = (currentPct + 0.5) / 100;
-            if (ratio >= target) target = (currentPct + 1.5) / 100;
-            const needed = ((target * tot - sd) / (1 - target)).toFixed(1);
-            return `<tr><td>${h.time.split(',')[0]}</td><td>${currentPct}%</td><td style="color:var(--red); font-weight:bold;">${Math.max(0, needed)} mi <span style="font-size:0.6rem; color:var(--dim);">to ${Math.round(target*100)}%</span></td></tr>`;
+            const sd = parseFloat(h.sd);
+            const tot = parseFloat(h.tot);
+            const ratio = sd / tot;
+            const currentPct = Math.round(ratio * 100);
+            
+            // Calculate specific target milestone for this entry
+            let targetRatio = (currentPct + 0.5) / 100;
+            if (ratio >= targetRatio) targetRatio = (currentPct + 1.5) / 100;
+            
+            const needed = ((targetRatio * tot - sd) / (1 - targetRatio)).toFixed(1);
+            const targetLabel = Math.round(targetRatio * 100);
+
+            return `
+                <tr>
+                    <td>${h.time.split(',')[0]}</td>
+                    <td>${sd.toFixed(1)}</td>
+                    <td>${tot.toFixed(1)}</td>
+                    <td style="color:var(--red); font-weight:bold;">
+                        ${Math.max(0, needed)} mi 
+                        <span style="font-size:0.6rem; color:var(--dim);">to ${targetLabel}%</span>
+                    </td>
+                </tr>
+            `;
         }).join('');
     }
 
